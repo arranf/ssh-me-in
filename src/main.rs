@@ -1,14 +1,15 @@
-#![warn(clippy::all)]
+#![warn(clippy::all, clippy::pedantic)]
 
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
 
-use anyhow::*;
+use anyhow::{anyhow, Result};
 use chrono::Utc;
 use directories::UserDirs;
 use external_ip;
+use indicatif::ProgressBar;
 use log::{debug, info, LevelFilter};
 use quick_xml::de::from_str;
 use rusoto_core::{region::Region, RusotoError};
@@ -48,10 +49,9 @@ async fn main() -> Result<()> {
     debug!("Options: {:?}", options);
     let security_groups = get_security_groups(&options.config).await?;
     debug!("Security Groups: {:?}", &security_groups);
-    // TODO: SPINNER
+
     let ip_address = get_ip_address().await?;
-    info!("IP Address: {}", &ip_address);
-    // TODO: SPINNER
+    println!("IP Address Found: {}", ip_address);
 
     let update_ip_results: Vec<Result<(), RusotoError<AuthorizeSecurityGroupIngressError>>> =
         update_ips(
@@ -70,7 +70,11 @@ async fn main() -> Result<()> {
 
 /// Attempts to obtain a consensus choice on this machines external IP address.
 async fn get_ip_address() -> Result<IpAddr> {
-    let ip = external_ip::get_ip().await;
+    let spinner = ProgressBar::new_spinner();
+    spinner.enable_steady_tick(50);
+    spinner.set_message("Obtaining IP address consensus from multiple sources");
+    let ip: Option<IpAddr> = external_ip::get_ip().await;
+    spinner.finish_and_clear();
     ip.ok_or_else(|| anyhow!("Unable to obtain IP address"))
 }
 
@@ -90,6 +94,9 @@ async fn update_ips(
     let ec2_client = Ec2Client::new(region);
     let machine_description: String = get_machine_description();
     let mut results: Vec<Result<(), RusotoError<AuthorizeSecurityGroupIngressError>>> = vec![];
+
+    let progress_bar = ProgressBar::new(security_group_ids.len() as u64);
+    progress_bar.set_message("Updating AWS security groups");
     for security_group_id in security_group_ids {
         let req = create_auth_request(
             &security_group_id,
@@ -98,7 +105,9 @@ async fn update_ips(
             is_dry_run,
         );
         results.push(ec2_client.authorize_security_group_ingress(req).await);
+        progress_bar.inc(1);
     }
+    progress_bar.finish_and_clear();
     Ok(results)
 }
 
@@ -182,9 +191,11 @@ fn get_machine_description() -> String {
     if user_identifier.is_empty() {
         user_identifier = username();
     }
+    debug!("User Identifier: {}", user_identifier);
     user_identifier.truncate(80);
 
     let mut host = host();
+    debug!("Host Identifier: {}", host);
     host.truncate(80);
 
     let description = format!(
@@ -226,5 +237,6 @@ fn create_auth_request(
     ip_range.description = Some(description.to_owned());
     ip_permission.ip_ranges = Some(vec![ip_range]);
     req.ip_permissions = Some(vec![ip_permission]);
+    debug!("Prepared Request: {:?}", req);
     req
 }
