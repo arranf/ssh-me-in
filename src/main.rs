@@ -112,6 +112,7 @@ fn handle_results(
         let security_group: &str = &security_groups[i];
         match result {
             Err(r) => {
+                // TODO: Move this error handling into a struct impl that takes the RusotoError, and then produces the correct error message for printing here
                 match r {
                     RusotoError::Unknown(_) => {
                         // We get a nasty error which displays as XML error here, so we deserialize to get just the message out.
@@ -123,7 +124,7 @@ fn handle_results(
                             Err(e) => println!("{}", e),
                         }
                     }
-                    _ => eprintln!("Error updating security group {}: {}", security_group, r),
+                    _ => println!("Error updating security group {}: {}", security_group, r),
                 }
             }
             Ok(_) => println!("Succesfully updated security group {}", security_group),
