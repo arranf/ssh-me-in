@@ -2,6 +2,7 @@
 
 use std::net::IpAddr;
 use std::path::PathBuf;
+use std::process::exit;
 use std::str::FromStr;
 
 use anyhow::*;
@@ -56,21 +57,22 @@ async fn main() -> Result<()> {
     info!("IP Address: {}", &ip_address);
     // TODO: SPINNER
 
-    let update_ip_results = update_ips(
-        &ip_address,
-        &security_groups,
-        &options.region,
-        options.dry_run,
-    )
-    .await?;
+    let update_ip_results: Vec<Result<(), RusotoError<AuthorizeSecurityGroupIngressError>>> =
+        update_ips(
+            &ip_address,
+            &security_groups,
+            &options.region,
+            options.dry_run,
+        )
+        .await?;
 
+    let is_error = update_ip_results.iter().any(|r| r.is_err());
     for (i, result) in update_ip_results.iter().enumerate() {
         match result {
             Err(r) => {
                 match r {
                     RusotoError::Unknown(_) => {
-                        // We get a nasty full XML error here.
-
+                        // We get a nasty error which displays as XML error here, so we deserialize to get just the message out.
                         let unknown_error: Result<UnknownError, _> = from_str(&format!("{}", r));
                         match &unknown_error {
                             Ok(e) => eprintln!(
@@ -90,8 +92,11 @@ async fn main() -> Result<()> {
         }
     }
 
-    // TODO: HANDLE EXIT CODE
-    Ok(())
+    // Ensure errors are reported correctly to OS.
+    match is_error {
+        true => exit(1),
+        false => exit(0),
+    }
 }
 
 /// Attempts to either add to or update the ingress rules for the given security groups with the machine's current IP address.
