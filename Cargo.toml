@@ -1,0 +1,25 @@
+[package]
+name = "ssh-me-in"
+version = "0.1.0"
+authors = ["Arran France <arran@arranfrance.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+chrono = "0.4"
+clap-verbosity-flag = "0.3"
+directories = "2.0"
+env_logger = "0.7"
+external-ip = "1.0"
+futures = "0.3"
+lazy_static = "1.4"
+log = "0.4"
+quick-xml = { version = "0.17", features = [ "serialize" ] }
+rusoto_core = "0.43.0-beta.1"
+rusoto_ec2 = "0.43.0-beta.1"
+serde = { version = "1.0", features = [ "derive" ] }
+structopt = "0.3"
+tokio = { version = "0.2", features = ["macros", "rt-core", "fs"] }
+whoami = "0.8"
