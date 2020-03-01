@@ -66,37 +66,16 @@ async fn main() -> Result<()> {
         )
         .await?;
 
-    let is_error = update_ip_results.iter().any(|r| r.is_err());
-    for (i, result) in update_ip_results.iter().enumerate() {
-        match result {
-            Err(r) => {
-                match r {
-                    RusotoError::Unknown(_) => {
-                        // We get a nasty error which displays as XML error here, so we deserialize to get just the message out.
-                        let unknown_error: Result<UnknownError, _> = from_str(&format!("{}", r));
-                        match &unknown_error {
-                            Ok(e) => eprintln!(
-                                "Error updating security group {}: {}",
-                                security_groups[i], e
-                            ),
-                            Err(e) => eprintln!("{}", e),
-                        }
-                    }
-                    _ => eprintln!(
-                        "Error updating security group {}: {}",
-                        security_groups[i], r
-                    ),
-                }
-            }
-            Ok(_) => println!("Succesfully updated security group {}", security_groups[i]),
-        }
-    }
+    handle_results(&update_ip_results, &security_groups);
 
-    // Ensure errors are reported correctly to OS.
-    match is_error {
-        true => exit(1),
-        false => exit(0),
-    }
+    // This is here to silence warnings, in all cases handle_results will process::exit()
+    Ok(())
+}
+
+/// Attempts to obtain a consensus choice on this machines external IP address.
+async fn get_ip_address() -> Result<IpAddr> {
+    let ip = external_ip::get_ip().await;
+    ip.ok_or_else(|| anyhow!("Unable to obtain IP address"))
 }
 
 /// Attempts to either add to or update the ingress rules for the given security groups with the machine's current IP address.
@@ -127,10 +106,39 @@ async fn update_ips(
     Ok(results)
 }
 
-/// Attempts to obtain a consensus choice on this machines external IP address.
-async fn get_ip_address() -> Result<IpAddr> {
-    let ip = external_ip::get_ip().await;
-    ip.ok_or_else(|| anyhow!("Unable to obtain IP address"))
+/// Iterates over the results from the update operations, pretty prints them, and then exits with the correct exit code.
+fn handle_results(
+    results: &Vec<Result<(), RusotoError<AuthorizeSecurityGroupIngressError>>>,
+    security_groups: &Vec<String>,
+) {
+    let is_error = results.iter().any(|r| r.is_err());
+    for (i, result) in results.iter().enumerate() {
+        let security_group: &str = &security_groups[i];
+        match result {
+            Err(r) => {
+                match r {
+                    RusotoError::Unknown(_) => {
+                        // We get a nasty error which displays as XML error here, so we deserialize to get just the message out.
+                        let unknown_error: Result<UnknownError, _> = from_str(&format!("{}", r));
+                        match &unknown_error {
+                            Ok(e) => {
+                                println!("Error updating security group {}: {}", security_group, e)
+                            }
+                            Err(e) => println!("{}", e),
+                        }
+                    }
+                    _ => eprintln!("Error updating security group {}: {}", security_group, r),
+                }
+            }
+            Ok(_) => println!("Succesfully updated security group {}", security_group),
+        }
+    }
+
+    // Ensure errors are reported correctly to OS.
+    match is_error {
+        true => exit(1),
+        false => exit(0),
+    }
 }
 
 /// Attempts to obtain a list of security group ids from a known path.
@@ -173,8 +181,6 @@ async fn get_security_groups(directory: &Option<PathBuf>) -> Result<Vec<String>>
 /// Creates a description to accompany the IP rule containing the user's name, machine name, and time.
 /// The description is truncated to fit the description's max length of 255 characters and filtered to ensure all characters are valid.
 fn get_machine_description() -> String {
-    // Get and truncate user identifier and machine identifier to fit into max length of description (256 chars) from the set
-
     let mut user_identifier = user();
     if user_identifier.is_empty() {
         user_identifier = username();
@@ -205,6 +211,7 @@ fn create_auth_request(
     description: &str,
     dry_run: bool,
 ) -> AuthorizeSecurityGroupIngressRequest {
+    // It's 'idiomatic' using rusoto to create a mutable struct with defaults and the mutate the fields you need.
     let mut req = AuthorizeSecurityGroupIngressRequest::default();
     req.group_id = Some(security_group_id.to_owned());
     req.dry_run = Some(dry_run);
