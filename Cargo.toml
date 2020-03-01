@@ -14,7 +14,6 @@ directories = "2.0"
 env_logger = "0.7"
 external-ip = "1.0"
 futures = "0.3"
-lazy_static = "1.4"
 log = "0.4"
 quick-xml = { version = "0.17", features = [ "serialize" ] }
 rusoto_core = "0.43.0-beta.1"

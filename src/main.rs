@@ -9,7 +9,6 @@ use anyhow::*;
 use chrono::Utc;
 use directories::UserDirs;
 use external_ip;
-use lazy_static::lazy_static;
 use log::{debug, info, LevelFilter};
 use quick_xml::de::from_str;
 use rusoto_core::{region::Region, RusotoError};
@@ -26,13 +25,10 @@ use unknown_error::UnknownError;
 mod options;
 use options::Options;
 
-lazy_static! {
-    static ref VALID_DESCRIPTION_CHARACTERS: Vec<char> = vec![
-        '.', ' ', '_', '-', ':', '/', '(', ')', '#', ',', '@', '[', ']', '+', '=', '&', ';', '{',
-        '}', '!', '$', '*',
-    ];
-}
-
+static VALID_DESCRIPTION_CHARACTERS: [char; 22] = [
+    '.', ' ', '_', '-', ':', '/', '(', ')', '#', ',', '@', '[', ']', '+', '=', '&', ';', '{', '}',
+    '!', '$', '*',
+];
 #[tokio::main]
 async fn main() -> Result<()> {
     let options = Options::from_args();

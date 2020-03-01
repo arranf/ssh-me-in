@@ -1536,7 +1536,6 @@ dependencies = [
  "env_logger",
  "external-ip",
  "futures",
- "lazy_static",
  "log",
  "quick-xml",
  "rusoto_core",
