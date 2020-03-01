@@ -18,7 +18,7 @@ pub struct Options {
     pub region: Option<String>,
 
     /// The path to the config file which contains line separated security group ids. Defaults to $HOME/authorize-me.
-    #[structopt(parse(from_os_str))]
+    #[structopt(short, long, parse(from_os_str))]
     pub config: Option<PathBuf>,
 
     #[structopt(flatten)]
