@@ -3,6 +3,7 @@
 name = "ssh-me-in"
 version = "0.1.1"
 authors = ["Arran France <arran@arranfrance.com>"]
+description = "A command line tool for adding your IP as a SSH rule to EC2 AWS security groups."
 edition = "2018"
 keywords = ["AWS", "EC2", "SSH"]
 license = "MIT"

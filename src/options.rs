@@ -5,7 +5,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "ssh-me-in",
-    about = "A tool for adding your IP as a SSH rule to AWS security groups."
+    about = "A command line tool for adding your IP as a SSH rule to EC2 AWS security groups."
 )]
 pub struct Options {
     /// Activate dry run mode for testing your permissions
