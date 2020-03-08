@@ -2,6 +2,21 @@
 
 `ssh-me-in` is a command line utility to add rules to one or more AWS EC2 security groups which allow you to SSH in. This can be useful for remote workers with a dynamic IP address who regularly need to SSH into EC2 instances.
 
+## Installation
+The easiest way to install `ssh-me-in` is via cargo.
+
+To do this you'll need Rust 1.4.1 or later installed, as well as `libtoolize` 1.4.2 or later, m4, and automake.
+
+
+```
+# Follow the instructions at https://rustup.rs/
+# then
+rustup update stable
+sudo apt-get install libtool m4 automake
+cargo install ssh-me-in
+```
+
+
 ## Configuration
 
 This section covers primarily non-command line configuration, for a list of all command line configuration please use `ssh-me-in --help`.
